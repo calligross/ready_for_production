@@ -1,0 +1,428 @@
+---
+title: "Multilanguage_Integration"
+output: html_notebook
+---
+
+```{r, include=TRUE, echo=TRUE, message=FALSE, eval=TRUE, document=FALSE, warning=FALSE}
+# Unsere R-Pakete
+library(reticulate)
+library(dplyr)
+library(purrr)
+library(ggplot2)
+library(corrplot)
+library(caret)
+library(png)
+library(sqldf)
+library(formatR)
+library(knitr)
+library(e1071)
+library(DBI)
+library(stringr)
+library(knitr)
+library(markdown)
+library(XLConnect)
+library(magrittr)
+library(RSQLite)
+library(rmarkdown)
+library(rprojroot)
+
+# Die Umgebung mit dem Python-Interpreter und den Python-Paketen
+#use_virtualenv(virtualenv = "mlworkshop",required = TRUE)
+use_python("/opt/Python/3.6.8/bin/python3.6") # wir definieren den Ordner, indem sich Python befindet
+
+```
+
+
+# Aufbau einer interaktiven R und Python Session ---------------------------------------
+
+
+# Ein R - Block
+```{r, include=TRUE, echo=FALSE, eval=TRUE}
+y <- 'R_Object_y'
+
+x <- c(TRUE, TRUE, FALSE, FALSE, TRUE)
+```
+
+
+# Ein Python - Block
+```{python}
+y = "Py_Object_y"
+
+x = [True, False]
+```
+
+
+# Ein Vergleich der Objekte und der Workspaces
+```{r}
+py$y
+y
+
+py$x
+x
+
+
+ls()                 # Der R-Workspace
+names(py)            # Der Python-Workspace
+```
+
+
+
+
+
+# Anwendung von Funktionen auf Objekte der anderen Sprache aus R heraus
+```{r}
+py_builts <- import_builtins() # wir importieren Standardfunktionen aus Python 
+
+py_builts$type(py$y) # eine Python-Funktion für ein Python-Objekt
+class(y)             # eine R-Funktion für ein R-Objekt
+
+class(py$y)          # eine R-Funktion für ein Python-Objekt
+py_builts$type(y)    # eine Python-Funktion für ein R-Objekt
+
+stringr::str_to_lower(y)
+stringr::str_to_lower(py$y)
+
+
+sum(x)
+sum(py$x)
+```
+
+
+
+
+# Anwendung von Funktionen auf Objekte der anderen Sprache aus Python heraus
+```{python}
+y.lower()
+r.y.lower()
+
+
+type(y)
+type(r.y)
+
+```
+
+
+
+# Objekte interaktiv verändern
+```{python}
+print(str("Ursprünglicher String: " + r.y))
+r.y = 'Ein anderer String'
+print(str("Neuer String: " + r.y))
+```
+
+```{r}
+y
+
+py$y = c(TRUE, FALSE, TRUE, TRUE, FALSE)
+py$y
+
+```
+
+```{python}
+y
+
+```
+
+
+
+# Datenbank-Operationen über R-Studio ---------------------------------------
+
+```{r}
+db <- dbConnect(SQLite(), dbname="Wholesale.sqlite") # Verbindung zu einer Datenbank herstellen
+
+
+# Inspektion der Datenbank
+dbListTables(db) # alle Tabellen, die sich in der Datenbank befinden   
+dbListFields(db, "PY_R_Data") # Unsere Spalten
+dbReadTable(db, "PY_R_Data")  # die Daten im Datensatz
+
+
+
+# =============================================================================
+#~~~~~~~~~~~~~~~~~~~~~~~~~~ Wholesale - Datensatz ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Ziel: Klassifikation von Kunden eines Großhandels;
+# Zielvariable: CHANNEL: 1 (Hotel/Restaurant/Café)  2 (Einzelhandel)
+
+# unabhängige Variablen:
+#FRESH: jährliche Ausgaben für Frischeprodukte
+#MILK: jährliche Ausgaben für Milchprodukte
+#GROCERY: jährliche Ausgaben für sonstige Lebensmittel
+#FROZEN: jährliche Ausgaben für Tiefkühlprodukte
+#DETERGENTS_PAPER: jährliche Ausgaben für Reinigungsmittel und Papierprodukte
+#DELICATESSEN: jährliche Ausgaben für Feinkostprodukte
+#REGION: Verkaufsregion (1: Lisnon, 2: Oporto, 3: Andere Regionen)
+
+# =============================================================================
+
+
+
+
+# Operationen in der Datenbank
+sqldf("SELECT Milk, Grocery, Frozen FROM PY_R_Data WHERE Channel = 1", dbname = "Wholesale.sqlite")
+sqldf("SELECT AVG(Frozen) AS Agg_Col FROM PY_R_Data GROUP BY Channel", dbname = "Wholesale.sqlite")
+
+
+# Einlesen der Daten in die R-Session
+Wholesale <- sqldf("SELECT * FROM PY_R_Data", dbname = "Wholesale.sqlite")
+
+Wholesale %>% head(3)
+Wholesale %>% map_chr(class) 
+Wholesale %>% summary
+
+```
+
+
+
+# Datenmanagement und Visualisierung mit R und Python ---------------------
+
+
+
+# Python DataFrame-Methoden
+```{python pyplot, echo=FALSE}
+import pandas as pd
+import seaborn as sns
+import matplotlib
+from matplotlib.pyplot import figure
+import matplotlib.pyplot as plt
+matplotlib.use('Agg')
+
+
+type(r['Wholesale'])
+
+r['Wholesale'].nunique() > 15
+
+metrical_cols = r['Wholesale'].nunique() > 15
+
+python_df_num = r['Wholesale'].loc[:,metrical_cols]
+
+print("")
+
+python_df_num.dtypes.value_counts()
+
+
+cor_mtx = r.Wholesale.loc[:, r.Wholesale.columns.difference(['Channel', 'Region'])].corr()
+```
+
+
+
+# Wir erzeugen Plots in Python...
+```{python}
+
+figure(num=None, figsize=(9, 7), dpi=100)
+sns.boxplot(data = python_df_num)
+plt.savefig('boxplot.png')
+
+figure(num=None, figsize=(11, 9), dpi=100)
+sns.heatmap(cor_mtx,
+            xticklabels=cor_mtx.columns.values,
+            yticklabels=cor_mtx.columns.values,
+            cmap='viridis',
+            vmin=-1,
+            vmax=1,
+            annot=True)
+plt.savefig('heatmap.png')
+```
+
+
+#... und schauen sie uns in R an
+```{r}
+knitr::include_graphics("boxplot.png")
+```
+
+```{r}
+knitr::include_graphics("heatmap.png")
+```
+
+
+# R
+```{r, fig.width=9, fig.height=7}
+Wholesale %>% 
+  select_if(function(x) length(unique(x)) > 15) %>% 
+  cor() %>% 
+  corrplot(method = "ellipse")
+
+```
+
+
+```{r}
+Wholesale <- Wholesale %>% mutate_at('Region', factor)
+
+Wholesale %>% map_chr(class)
+```
+
+
+```{python}
+r.Wholesale.dtypes
+```
+
+
+
+# Ein Machine-Learning-Workflow mit scikit-learn ---------------------
+
+
+# Modellierung in Python
+```{python}
+import numpy as np
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import RobustScaler, OneHotEncoder, FunctionTransformer
+from sklearn.compose import ColumnTransformer
+
+
+X = r.Wholesale[r.Wholesale.columns.difference(['Channel'])]
+y = r.Wholesale['Channel']
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.4, random_state=42)
+
+PreProc = ColumnTransformer([
+  ('scal', RobustScaler(quantile_range = (0.1,0.9)), X_train.columns.difference(['Region', 'Channel'])),
+  ('dummysierung', OneHotEncoder(), ['Region'])
+  ], remainder='passthrough')
+
+
+my_knn = KNeighborsClassifier()
+
+
+my_pipe = Pipeline(steps = [('Preprocessing', PreProc),
+                            ('Modeling', my_knn)])
+
+
+param_grid = {'Modeling__n_neighbors': [1,3,5,7]}
+
+
+GS_my_pipe = GridSearchCV(my_pipe,
+                          param_grid,
+                          cv = 2,
+                          scoring="accuracy",
+                          refit = True)
+                          
+
+GS_my_pipe.fit(X_train, y_train)
+
+print(GS_my_pipe.best_params_)
+
+Preds = GS_my_pipe.predict(X_test)
+```
+
+
+# Evaluation in R
+```{r}
+class(py$y_test)
+class(py$Preds)
+
+vector_predictions <- py$Preds %>% factor
+vector_test_obs <- py$y_test %>% as.numeric %>% factor
+
+
+confusionMatrix(
+  data = vector_predictions,
+  reference = vector_test_obs
+)
+```
+
+
+
+# Ergänzung um eine PreProcessing-Methode von caret -----------------------------
+
+
+# Featureselektion mit caret 
+```{r}
+redund_feat <- Wholesale %>% 
+  select_if(function(x) length(unique(x)) > 15) %>% 
+  cor %>% 
+  findCorrelation(names = TRUE)
+```
+
+
+
+# Übertragung in Python
+```{python}
+def py_findCorrelation(data = None):
+  data = data.drop(r['redund_feat'], axis = 1)
+  return(data)
+
+py_findCorrelation(X_train).head(2)
+X_train.head(2)
+```
+
+
+# Integration in scikit-learn 
+```{python}
+PreProc = ColumnTransformer([('Drop_corr_features', FunctionTransformer(py_findCorrelation, validate=False),  X_train.columns)], remainder='passthrough')
+transformed_values = PreProc.fit_transform(X_train)
+
+pd.DataFrame(transformed_values).head(2)
+print('')
+py_findCorrelation(X_train).head(2)
+```
+
+
+# Ein kompletter ML-Workflow mit carets input
+```{python}
+PreProc = ColumnTransformer([
+  ('Drop_corr_features', FunctionTransformer(py_findCorrelation, validate = False),  X_train.columns),
+  ('scal', RobustScaler(quantile_range = (0.1,0.9)), X_train.columns.difference(['Region', 'Channel'])),
+  ('dummysierung', OneHotEncoder(), ['Region'])
+  ], remainder='passthrough')
+
+
+my_knn = KNeighborsClassifier()
+
+my_pipe = Pipeline(steps = [('Preprocessing', PreProc),
+                            ('Modeling', my_knn)])
+
+
+param_grid = {'Modeling__n_neighbors': [1,3,5,7]}
+
+GS_my_pipe = GridSearchCV(my_pipe,
+                          param_grid,
+                          cv = 2,
+                          scoring= "accuracy", 
+                          refit = True)
+
+GS_my_pipe.fit(X_train, y_train)
+
+Preds = GS_my_pipe.predict(X_test)
+```
+
+
+# Evaluation in R
+```{r}
+class(py$y_test)
+class(py$Preds)
+
+vector_predictions <- py$Preds %>% factor
+vector_test_obs <- py$y_test %>% as.numeric %>% factor
+
+
+confusionMatrix(
+  data = vector_predictions,
+  reference = vector_test_obs
+)
+```
+
+
+
+# Abspeichern der Ergebnisse als SQL-Tabelle ------------------------------
+
+```{r}
+Test_data <- py$X_test
+
+Prediction_df <- cbind(Test_data, vector_test_obs, vector_predictions)
+
+Prediction_df <- Prediction_df %>% 
+  rename(Channel = vector_test_obs,
+         Predicted_Channel = vector_predictions)
+
+dbWriteTable(conn = db, name = "Predict_Table", value = Prediction_df, row.names = FALSE, header = TRUE)
+
+
+# Inspektion der Datenbank
+dbListTables(db) # wir haben eine neue Tabelle
+dbListFields(db, "Predict_Table") # die Felder
+dbReadTable(db, "Predict_Table")  # die Daten 
+
+```
+
