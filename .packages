@@ -31,6 +31,14 @@ tfdeploy
 tfruns
 XLConnect
 
+config
+here
+jsonlite
+RCurl
+rstudioapi
+packrat
+rsconnect
+
 # Python Packages (latest Packages from PyPy)
 
 absl-py              0.7.1  
