@@ -28,7 +28,7 @@ library(rprojroot)
 
 # Die Umgebung mit dem Python-Interpreter und den Python-Paketen
 #use_virtualenv(virtualenv = "mlworkshop",required = TRUE)
-use_python("/opt/Python/3.6.8/bin/python3.6") # wir definieren den Ordner, indem sich Python befindet
+use_python("/opt/Python/3.7.1/bin/python3.7") # wir definieren den Ordner, indem sich Python befindet
 
 ```
 
