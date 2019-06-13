@@ -211,3 +211,5 @@ Folien und R-Code:
 
 Quell-Repo plumber-model:
 [github.com/sol-eng/plumber-model](https://github.com/sol-eng/plumber-model)
+
+Bei Interesse an Data Science Projekten, analytic infrastructure consulting und YUNA: [eoda.de](https://www.eoda.de)
